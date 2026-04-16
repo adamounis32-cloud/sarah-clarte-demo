@@ -16,45 +16,23 @@
             align-items: center;
             justify-content: center;
         }
-        .container {
-            text-align: center;
-            max-width: 500px;
-            padding: 2rem;
-        }
+        .container { text-align: center; max-width: 500px; padding: 2rem; }
         .logo { font-size: 3rem; margin-bottom: 1rem; }
         h1 { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem; color: #f8fafc; }
-        .subtitle { font-size: 1rem; color: #94a3b8; margin-bottom: 2.5rem; }
-        #call-button {
-            width: 120px; height: 120px; border-radius: 50%; border: none;
-            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-            color: white; font-size: 3rem; cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 0 40px rgba(34, 197, 94, 0.3);
-            display: flex; align-items: center; justify-content: center;
-            margin: 0 auto 1.5rem;
+        .subtitle { font-size: 1rem; color: #94a3b8; margin-bottom: 1.5rem; }
+        .arrow { font-size: 2rem; color: #22c55e; margin: 2rem 0 1rem; animation: bounce 2s infinite; }
+        @keyframes bounce {
+            0%,100% { transform: translateY(0); }
+            50% { transform: translateY(10px); }
         }
-        #call-button:hover { transform: scale(1.08); box-shadow: 0 0 60px rgba(34, 197, 94, 0.5); }
-        #call-button.active {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            box-shadow: 0 0 40px rgba(239, 68, 68, 0.3);
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0% { box-shadow: 0 0 40px rgba(239, 68, 68, 0.3); }
-            50% { box-shadow: 0 0 60px rgba(239, 68, 68, 0.5); }
-            100% { box-shadow: 0 0 40px rgba(239, 68, 68, 0.3); }
-        }
-        #status { font-size: 1rem; color: #94a3b8; margin-bottom: 2rem; min-height: 1.5rem; }
-        #status.connected { color: #22c55e; }
-        #status.error { color: #ef4444; }
         .instructions {
             background: rgba(255,255,255,0.05); border-radius: 12px; padding: 1.5rem;
             text-align: left; font-size: 0.9rem; line-height: 1.6; color: #94a3b8;
-            border: 1px solid rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.08); margin-bottom: 2rem;
         }
         .instructions h3 { color: #f8fafc; margin-bottom: 0.8rem; font-size: 1rem; }
         .instructions li { margin-bottom: 0.4rem; margin-left: 1rem; }
-        .footer { margin-top: 2rem; font-size: 0.8rem; color: #475569; }
+        .footer { font-size: 0.8rem; color: #475569; }
     </style>
 </head>
 <body>
@@ -62,25 +40,22 @@
         <div class="logo">☀️</div>
         <h1>Sarah — Clarté Énergie</h1>
         <p class="subtitle">Bot vocal de qualification prospect</p>
-        <button id="call-button" onclick="toggleCall()">📞</button>
-        <p id="status">Cliquez pour démarrer l'appel</p>
         <div class="instructions">
             <h3>Mode d'emploi</h3>
             <ul>
-                <li>Cliquez sur le bouton vert pour lancer un appel</li>
+                <li>Cliquez sur le bouton vert en bas à droite</li>
+                <li>Autorisez le microphone</li>
                 <li>Sarah va se présenter automatiquement</li>
-                <li>Répondez comme un prospect (propriétaire, panneaux, crédit...)</li>
-                <li>Testez les objections : "c'est une arnaque", "j'ai pas le temps"</li>
-                <li>Cliquez sur le bouton rouge pour raccrocher</li>
+                <li>Répondez comme un prospect</li>
+                <li>Testez : "c'est une arnaque", "j'ai pas le temps", "je comprends rien"</li>
             </ul>
         </div>
+        <div class="arrow">👇</div>
+        <p class="subtitle">Le bouton d'appel est en bas à droite</p>
         <p class="footer">Démo interne — Clarté Énergie 2026</p>
     </div>
 
     <script>
-        var vapiInstance = null;
-        var isCallActive = false;
-
         (function (d, t) {
             var g = document.createElement(t), s = d.getElementsByTagName(t)[0];
             g.src = "https://cdn.jsdelivr.net/gh/VapiAI/html-script-tag@latest/dist/assets/index.js";
@@ -88,64 +63,27 @@
             g.async = true;
             s.parentNode.insertBefore(g, s);
             g.onload = function () {
-                vapiInstance = window.vapiSDK.run({
+                window.vapiSDK.run({
                     apiKey: "9f483788-f24a-4013-b3e5-a87b50b3001c",
                     assistant: "4a7146ad-d822-4c63-b3ea-b4dd8dc7a465",
                     config: {
-                        hide: true,
-                        position: "bottom-right"
+                        position: "bottom-right",
+                        idle: {
+                            color: "rgb(34, 197, 94)",
+                            type: "pill",
+                            title: "Parler à Sarah",
+                            subtitle: "Cliquez pour appeler"
+                        },
+                        active: {
+                            color: "rgb(239, 68, 68)",
+                            type: "pill",
+                            title: "Appel en cours...",
+                            subtitle: "Cliquez pour raccrocher"
+                        }
                     }
                 });
-
-                vapiInstance.on("call-start", function() {
-                    isCallActive = true;
-                    document.getElementById("call-button").classList.add("active");
-                    document.getElementById("call-button").innerHTML = "🔴";
-                    var status = document.getElementById("status");
-                    status.textContent = "Appel en cours...";
-                    status.className = "connected";
-                });
-
-                vapiInstance.on("call-end", function() {
-                    isCallActive = false;
-                    document.getElementById("call-button").classList.remove("active");
-                    document.getElementById("call-button").innerHTML = "📞";
-                    var status = document.getElementById("status");
-                    status.textContent = "Appel terminé — Cliquez pour relancer";
-                    status.className = "";
-                });
-
-                vapiInstance.on("speech-start", function() {
-                    document.getElementById("status").textContent = "Sarah parle...";
-                });
-
-                vapiInstance.on("speech-end", function() {
-                    document.getElementById("status").textContent = "À vous de parler...";
-                });
-
-                vapiInstance.on("error", function(e) {
-                    console.error("Vapi error:", e);
-                    var status = document.getElementById("status");
-                    status.textContent = "Erreur — vérifiez votre micro";
-                    status.className = "error";
-                });
-
-                console.log("Vapi SDK loaded successfully");
             };
         })(document, "script");
-
-        function toggleCall() {
-            if (!vapiInstance) {
-                document.getElementById("status").textContent = "Chargement du SDK...";
-                return;
-            }
-            if (isCallActive) {
-                vapiInstance.stop();
-            } else {
-                document.getElementById("status").textContent = "Connexion...";
-                vapiInstance.start();
-            }
-        }
     </script>
 </body>
 </html>
