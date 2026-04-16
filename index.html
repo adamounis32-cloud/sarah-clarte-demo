@@ -26,8 +26,7 @@
             color: white; font-size: 3.5rem; cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 0 40px rgba(34, 197, 94, 0.3);
-            display: flex; align-items: center; justify-content: center;
-            margin: 0 auto 1.5rem;
+            margin: 0 auto 1.5rem; display: block;
         }
         #call-button:hover { transform: scale(1.08); box-shadow: 0 0 60px rgba(34, 197, 94, 0.5); }
         #call-button.active {
@@ -36,11 +35,9 @@
             border-color: rgba(239, 68, 68, 0.3);
             animation: pulse 2s infinite;
         }
-        #call-button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
         @keyframes pulse {
-            0% { box-shadow: 0 0 40px rgba(239, 68, 68, 0.3); }
+            0%,100% { box-shadow: 0 0 40px rgba(239, 68, 68, 0.3); }
             50% { box-shadow: 0 0 60px rgba(239, 68, 68, 0.5); }
-            100% { box-shadow: 0 0 40px rgba(239, 68, 68, 0.3); }
         }
         #status { font-size: 1.1rem; color: #94a3b8; margin-bottom: 2rem; min-height: 1.5rem; }
         #status.connected { color: #22c55e; font-weight: 600; }
@@ -61,8 +58,8 @@
         <div class="logo">☀️</div>
         <h1>Sarah — Clarté Énergie</h1>
         <p class="subtitle">Bot vocal de qualification prospect</p>
-        <button id="call-button" disabled>📞</button>
-        <p id="status" class="loading">Chargement...</p>
+        <button id="call-button">📞</button>
+        <p id="status">Cliquez sur le bouton pour appeler Sarah</p>
         <div class="instructions">
             <h3>Mode d'emploi</h3>
             <ul>
@@ -76,61 +73,79 @@
         <p class="footer">Démo interne — Clarté Énergie 2026</p>
     </div>
 
-    <script type="module">
-        import Vapi from "https://cdn.jsdelivr.net/npm/@vapi-ai/web@latest/+esm";
+    <script>
+        var btn = document.getElementById("call-button");
+        var statusEl = document.getElementById("status");
+        var active = false;
+        var vapiInstance = null;
+        var sdkReady = false;
 
-        const vapi = new Vapi("9f483788-f24a-4013-b3e5-a87b50b3001c");
-        const btn = document.getElementById("call-button");
-        const status = document.getElementById("status");
-        let active = false;
+        function setStatus(text, cls) {
+            statusEl.textContent = text;
+            statusEl.className = cls || "";
+        }
 
-        btn.disabled = false;
-        status.textContent = "Cliquez pour démarrer l'appel";
-        status.className = "";
+        function loadSDK() {
+            return new Promise(function(resolve, reject) {
+                var s = document.createElement("script");
+                s.type = "module";
+                s.textContent = 'import Vapi from "https://cdn.jsdelivr.net/npm/@vapi-ai/web@2.2.2/+esm"; window.__VapiClass = Vapi;  window.dispatchEvent(new Event("vapi-loaded"));';
+                document.head.appendChild(s);
+                window.addEventListener("vapi-loaded", function() { resolve(); });
+                setTimeout(function() { reject(new Error("SDK timeout")); }, 10000);
+            });
+        }
 
-        vapi.on("call-start", () => {
-            active = true;
-            btn.classList.add("active");
-            btn.innerHTML = "⏹";
-            status.textContent = "Appel en cours...";
-            status.className = "connected";
-        });
-
-        vapi.on("call-end", () => {
-            active = false;
-            btn.classList.remove("active");
-            btn.innerHTML = "📞";
-            status.textContent = "Appel terminé — Cliquez pour relancer";
-            status.className = "";
-        });
-
-        vapi.on("speech-start", () => { status.textContent = "Sarah parle..."; });
-        vapi.on("speech-end", () => { status.textContent = "À vous de parler..."; });
-
-        vapi.on("error", (e) => {
-            console.error("Vapi error:", e);
-            status.textContent = "Erreur — vérifiez votre micro et rechargez";
-            status.className = "error";
-            active = false;
-            btn.classList.remove("active");
-            btn.innerHTML = "📞";
-        });
-
-        btn.addEventListener("click", async () => {
-            if (active) {
-                vapi.stop();
-            } else {
-                status.textContent = "Connexion...";
-                status.className = "loading";
+        async function initAndCall() {
+            if (!sdkReady) {
+                setStatus("Chargement du SDK...", "loading");
                 try {
-                    await vapi.start("4a7146ad-d822-4c63-b3ea-b4dd8dc7a465");
-                } catch (e) {
-                    console.error("Start error:", e);
-                    status.textContent = "Erreur — autorisez le micro et réessayez";
-                    status.className = "error";
+                    await loadSDK();
+                    vapiInstance = new window.__VapiClass("9f483788-f24a-4013-b3e5-a87b50b3001c");
+                    sdkReady = true;
+
+                    vapiInstance.on("call-start", function() {
+                        active = true;
+                        btn.classList.add("active");
+                        btn.textContent = "⏹";
+                        setStatus("Appel en cours...", "connected");
+                    });
+                    vapiInstance.on("call-end", function() {
+                        active = false;
+                        btn.classList.remove("active");
+                        btn.textContent = "📞";
+                        setStatus("Appel terminé — Cliquez pour relancer");
+                    });
+                    vapiInstance.on("speech-start", function() { setStatus("Sarah parle...", "connected"); });
+                    vapiInstance.on("speech-end", function() { setStatus("À vous de parler...", "connected"); });
+                    vapiInstance.on("error", function(e) {
+                        console.error("Vapi error:", e);
+                        active = false;
+                        btn.classList.remove("active");
+                        btn.textContent = "📞";
+                        setStatus("Erreur — rechargez la page", "error");
+                    });
+                } catch(e) {
+                    console.error("SDK load error:", e);
+                    setStatus("Erreur chargement SDK — rechargez la page", "error");
+                    return;
                 }
             }
-        });
+
+            if (active) {
+                vapiInstance.stop();
+            } else {
+                setStatus("Connexion...", "loading");
+                try {
+                    await vapiInstance.start("4a7146ad-d822-4c63-b3ea-b4dd8dc7a465");
+                } catch(e) {
+                    console.error("Call start error:", e);
+                    setStatus("Erreur — autorisez le micro et réessayez", "error");
+                }
+            }
+        }
+
+        btn.addEventListener("click", initAndCall);
     </script>
 </body>
 </html>
